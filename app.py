@@ -1,43 +1,40 @@
+%%writefile app.py
 import streamlit as st
-import yfinance as yf
-from transformers import pipeline
-import os
+from utils.grok_ai import grok_stock_intelligence
 
-# --- APP CONFIG ---
-st.set_page_config(page_title="InsiderIntel", layout="wide")
+st.set_page_config(page_title="Insider Stock Intel", layout="wide")
 
-# --- LOAD MODELS ---
-@st.cache_resource
-def load_sentiment_model():
-    return pipeline("sentiment-analysis", model="ProsusAI/finbert")
+st.title("📈 Insider-Style Stock News Intelligence Platform")
+st.write("Paste headlines → Get insider intelligence using Grok Cloud ✅")
 
-sentiment_pipe = load_sentiment_model()
+grok_api_key = st.text_input("Enter Grok API Key", type="password")
+hf_token = st.text_input("Enter HuggingFace Token (optional, only storing)", type="password")
 
-# --- UI LAYOUT ---
-st.title("🕵️‍♂️ Insider-Style Stock Intelligence")
-ticker_input = st.sidebar.text_input("Enter Ticker", "NVDA")
+stock = st.text_input("Stock Name / Ticker (Example: TSLA, INFY, AAPL)")
 
-if ticker_input:
-    stock = yf.Ticker(ticker_input)
-    
-    col1, col2 = st.columns([1, 1])
+headlines = st.text_area(
+    "Paste News Headlines (one per line)",
+    height=220,
+    placeholder="Example:\nTesla shares rise after delivery numbers...\nApple faces regulatory pressure...\nInfosys wins major contract..."
+)
 
-    with col1:
-        st.subheader("Latest Market News")
-        news = stock.news[:3]
-        for n in news:
-            sentiment = sentiment_pipe(n['title'])[0]
-            st.write(f"**{n['title']}**")
-            st.caption(f"Sentiment: {sentiment['label']} ({round(sentiment['score'], 2)})")
+if st.button("Generate Insider Intelligence"):
+    if not grok_api_key:
+        st.error("Please enter Grok API key")
+    elif not stock:
+        st.error("Please enter stock name/ticker")
+    elif not headlines.strip():
+        st.error("Please paste some headlines")
+    else:
+        with st.spinner("Analyzing like an insider..."):
+            result = grok_stock_intelligence(
+                grok_api_key=grok_api_key,
+                stock=stock,
+                headlines_text=headlines
+            )
 
-    with col2:
-        st.subheader("Grok Insider Analysis")
-        if st.button("Analyze with Grok Cloud"):
-            # This fetches the API Key from Hugging Face Secrets
-            grok_key = os.getenv("GROK_API_KEY")
-            if grok_key:
-                st.success("Analyzing patterns...")
-                # Note: Replace with actual Grok SDK call once your key is active
-                st.write("Grok suggests: 'High institutional accumulation detected alongside positive sentiment.'")
-            else:
-                st.error("Please add your GROK_API_KEY to Secrets.")
+        st.subheader("✅ Insider Intelligence Report")
+        st.write(result)
+
+        st.subheader("🔐 HuggingFace Token Note")
+        st.info("HF token is accepted but not used for models (as you requested).")
