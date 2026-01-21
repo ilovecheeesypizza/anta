@@ -1,5 +1,4 @@
+%%writefile requirements.txt
 streamlit
-yfinance
-transformers
-torch
-xai-sdk
+requests
+python-dotenv
